@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Infosy License Admin V3</title>
+<style>
+:root{--bg:#0f172a;--card:#1e293b;--line:#334155;--text:#e2e8f0;--muted:#94a3b8;--blue:#2563eb;--green:#10b981;--red:#ef4444;--amber:#f59e0b;--cyan:#06b6d4}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(135deg,#020617,#0f172a);color:var(--text);font-family:Inter,Arial,sans-serif}
+.wrap{max-width:1400px;margin:0 auto;padding:28px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}.title{font-size:30px;font-weight:900}.sub{color:var(--muted)}
+.card{background:rgba(30,41,59,.92);border:1px solid var(--line);border-radius:18px;padding:20px;margin:16px 0;box-shadow:0 10px 30px #0005}
+.grid{display:grid;gap:14px}.stats{grid-template-columns:repeat(5,1fr)}.stat{background:#0b1220;border:1px solid var(--line);border-radius:14px;padding:18px}.stat b{display:block;font-size:30px;margin-top:8px}
+.tabs{display:flex;gap:10px;flex-wrap:wrap}.tab{border:1px solid var(--line);background:#0b1220;color:var(--text);padding:12px 16px;border-radius:12px;cursor:pointer;font-weight:800}.tab.active{background:var(--blue);border-color:#60a5fa}
+input,textarea,select{width:100%;background:#020617;border:1px solid #475569;color:white;border-radius:12px;padding:13px;font-size:15px}textarea{min-height:72px}
+button{border:0;border-radius:12px;padding:12px 16px;font-weight:900;cursor:pointer;color:white;background:var(--blue)}button.green{background:var(--green)}button.red{background:var(--red)}button.amber{background:var(--amber);color:#111827}button.gray{background:#475569}
+.row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}.row4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.table{width:100%;border-collapse:collapse;margin-top:12px}.table th,.table td{border-bottom:1px solid var(--line);padding:10px;text-align:left;font-size:13px;vertical-align:top}.table th{color:#93c5fd}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#0b1220;border:1px solid var(--line);font-size:12px}.ok{color:#34d399}.bad{color:#f87171}.warn{color:#fbbf24}
+.hidden{display:none}.login{max-width:420px;margin:120px auto}.muted{color:var(--muted)}.mono{font-family:Consolas,monospace}.actions{display:flex;gap:6px;flex-wrap:wrap}.copybox{background:#020617;border:1px dashed #475569;padding:12px;border-radius:12px;margin-top:12px}
+@media(max-width:900px){.stats,.row,.row4,.row3{grid-template-columns:1fr}.wrap{padding:14px}}
+</style>
+</head>
+<body>
+<div id="login" class="login card">
+  <h1>Admin Login</h1>
+  <p class="muted">Enter your admin PIN.</p>
+  <input id="pin" type="password" placeholder="Admin PIN" />
+  <input id="loginPassword" type="password" placeholder="Admin Password (required after you set one)" style="margin-top:10px" />
+  <p class="muted" style="font-size:12px">Login fields are flexible. Admin can choose PIN only, password only, fingerprint only, or any combination.</p>
+  <button onclick="login()" style="width:100%;margin-top:12px">Login</button>
+  <p id="loginMsg" class="bad"></p>
+</div>
+
+<div id="app" class="wrap hidden">
+  <div class="top">
+    <div><div class="title">Infosy License Admin V3</div><div class="sub">License, device location, device limit, expiry, ban/delete, 24h usage history.</div></div>
+    <button class="gray" onclick="logout()">Logout</button>
+  </div>
+
+  <div class="grid stats">
+    <div class="stat">Licenses<b id="statLic">0</b></div>
+    <div class="stat">Active<b id="statAct">0</b></div>
+    <div class="stat">Banned<b id="statBan">0</b></div>
+    <div class="stat">Devices<b id="statDev">0</b></div>
+    <div class="stat">24h Usage<b id="statUsage">0m</b></div>
+  </div>
+
+  <div class="tabs card">
+    <button class="tab active" onclick="showTab('licenses',this)">Licenses</button>
+    <button class="tab" onclick="showTab('devices',this)">Devices & Location</button>
+    <button class="tab" onclick="showTab('usage',this)">24h Usage History</button>
+    <button class="tab" onclick="showTab('update',this)">Update Settings</button>
+    <button class="tab" onclick="showTab('security',this)">Change Admin PIN</button>
+  </div>
+
+  <section id="tab-update" class="card hidden">
+    <h2>Update Settings / Version Lock</h2>
+    <p class="muted">When Force Update is ON, old client versions cannot activate or verify until they update.</p>
+    <div class="row3">
+      <input id="latestVersion" placeholder="Latest Version e.g. 1.0.1">
+      <input id="downloadUrl" placeholder="Download URL">
+      <label class="card" style="margin:0"><input id="forceUpdate" type="checkbox" style="width:auto"> Force Update</label>
+    </div>
+    <textarea id="updateMessage" placeholder="Update message"></textarea>
+    <button onclick="saveUpdate()">Save Update Settings</button>
+  </section>
+
+
+  <section id="tab-security" class="card hidden">
+    
+    <h2>Admin Login Security Mode</h2>
+    <p class="muted">Choose what will be required for admin login. You can enable one, two, or all three.</p>
+    <div class="row3">
+      <label class="card" style="margin:0"><input id="modeRequirePin" type="checkbox" style="width:auto"> Require PIN</label>
+      <label class="card" style="margin:0"><input id="modeRequirePassword" type="checkbox" style="width:auto"> Require Password</label>
+      <label class="card" style="margin:0"><input id="modeRequireFingerprint" type="checkbox" style="width:auto"> Require Browser Fingerprint</label>
+    </div>
+    <button onclick="saveSecurityModes()" class="green">Save Login Security Mode</button>
+    <p id="securityModeMsg" class="muted"></p>
+    <hr style="border-color:#334155;margin:22px 0">
+
+    <h2>Change Admin PIN</h2>
+    <p class="muted">Change the admin panel login PIN. The new PIN is stored as SHA-256 hash in the server database, not as plain text.</p>
+    <div class="row3">
+      <input id="currentAdminPin" type="password" placeholder="Current PIN">
+      <input id="newAdminPin" type="password" placeholder="New PIN">
+      <input id="confirmAdminPin" type="password" placeholder="Confirm New PIN">
+    </div>
+    <button onclick="changeAdminPin()" class="amber">Change PIN</button>
+    <p id="pinChangeMsg" class="muted"></p>
+
+    <hr style="border-color:#334155;margin:22px 0">
+    <h2>Change Admin Password</h2>
+    <p class="muted">Password is optional until you set one. After setting it, login requires PIN + password.</p>
+    <div class="row3">
+      <input id="currentAdminPassword" type="password" placeholder="Current Password (blank if first time)">
+      <input id="newAdminPassword" type="password" placeholder="New Password">
+      <input id="confirmAdminPassword" type="password" placeholder="Confirm New Password">
+    </div>
+    <button onclick="changeAdminPassword()" class="amber">Change Password</button>
+    <p id="passwordChangeMsg" class="muted"></p>
+
+    <hr style="border-color:#334155;margin:22px 0">
+    <h2>Admin Browser Fingerprint Lock</h2>
+    <p class="muted">This is browser/device fingerprint lock, not real biometric fingerprint. After you register a fingerprint, only registered admin browsers can login.</p>
+    <div class="row3">
+      <input id="fingerprintLabel" placeholder="Fingerprint label e.g. My Laptop Chrome">
+      <button onclick="registerFingerprint()" class="green">Register This Browser</button>
+      <button onclick="loadSecurity()" class="gray">Refresh Security</button>
+    </div>
+    <table class="table" id="fingerprintTable"></table>
+
+  </section>
+
+
+  <section id="tab-licenses" class="card">
+    <h2>Create License</h2>
+    <div class="row">
+      <input id="newKey" placeholder="License key blank = auto">
+      <input id="newName" placeholder="Customer name">
+      <input id="newContact" placeholder="Telegram/phone">
+      <input id="newMax" type="number" value="1" min="1" placeholder="Max devices">
+      <input id="newDays" type="number" value="30" min="1" placeholder="Valid days">
+    </div>
+    <textarea id="newNote" placeholder="Note"></textarea>
+    <button class="green" onclick="createLicense()">Create License</button>
+    <div id="createdKey" class="copybox hidden"></div>
+
+    <h2>License List</h2>
+    <table class="table" id="licenseTable"></table>
+  </section>
+
+  <section id="tab-devices" class="card hidden">
+    <h2>Devices & IP Location</h2>
+    <p class="muted">Location is approximate IP-based location only. No hidden GPS tracking.</p>
+    <table class="table" id="deviceTable"></table>
+  </section>
+
+  <section id="tab-usage" class="card hidden">
+    <h2>24h Usage History</h2>
+    <p class="muted">Usage is calculated from client heartbeat pings. 1 ping per minute is recommended.</p>
+    <table class="table" id="usageTable"></table>
+  </section>
+</div>
+
+<script>
+let TOKEN = localStorage.getItem('adminToken') || '';
+let STATE = null;
+function authHeaders(){return {'Content-Type':'application/json','Authorization':'Bearer '+TOKEN};}
+async function makeAdminFingerprint(){
+  const parts = [
+    navigator.userAgent || '',
+    navigator.platform || '',
+    navigator.language || '',
+    Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+    String(screen.width || ''),
+    String(screen.height || ''),
+    String(screen.colorDepth || '')
+  ].join('|');
+  const data = new TextEncoder().encode(parts);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function login(){
+  const fingerprintHash = await makeAdminFingerprint();
+  const r = await fetch('/api/admin/login',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      pin:document.getElementById('pin').value,
+      password:document.getElementById('loginPassword').value,
+      fingerprintHash
+    })
+  });
+  const ct = r.headers.get('content-type') || '';
+  if (!ct.includes('application/json')) {
+    const txt = await r.text();
+    loginMsg.textContent = 'Admin API returned non-JSON response. Preview: ' + txt.slice(0, 120);
+    return;
+  }
+  const j = await r.json();
+  if(!j.ok){loginMsg.textContent=j.reason || 'Login failed';return}
+  TOKEN=j.token;localStorage.setItem('adminToken',TOKEN);document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');load();
+}
+function logout(){localStorage.removeItem('adminToken');location.reload();}
+function showTab(id,btn){
+  ['licenses','devices','usage','update','security'].forEach(x=>document.getElementById('tab-'+x).classList.add('hidden'));
+  document.getElementById('tab-'+id).classList.remove('hidden');
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');
+}
+async function api(url, method='GET', body=null){
+  const r=await fetch(url,{method,headers:authHeaders(),body:body?JSON.stringify(body):undefined});
+  if(r.status===401){logout();return}
+  const ct = r.headers.get('content-type') || '';
+  if(!ct.includes('application/json')){
+    const txt = await r.text();
+    alert('Admin API returned non-JSON response. Check license-server terminal. Preview: ' + txt.slice(0, 180));
+    return { ok:false, reason:'NON_JSON_RESPONSE' };
+  }
+  return r.json();
+}
+function fmt(dt){return dt?new Date(dt).toLocaleString():''}
+function mins(m){m=Number(m||0);const h=Math.floor(m/60);const mm=m%60;return h?`${h}h ${mm}m`:`${mm}m`}
+async function load(){
+  const j=await api('/api/admin/state'); if(!j||!j.ok)return; STATE=j;
+  document.getElementById('statLic').textContent=j.licenses.length;
+  document.getElementById('statAct').textContent=j.licenses.filter(l=>!l.banned && new Date(l.expiresAt)>new Date()).length;
+  document.getElementById('statBan').textContent=j.licenses.filter(l=>l.banned).length;
+  document.getElementById('statDev').textContent=j.devices.length;
+  document.getElementById('statUsage').textContent=mins(j.usage24h.totalMinutes);
+  latestVersion.value=j.settings.latestVersion||'';downloadUrl.value=j.settings.downloadUrl||'';forceUpdate.checked=!!j.settings.forceUpdate;updateMessage.value=j.settings.updateMessage||'';
+  renderLicenses();renderDevices();renderUsage(); if(j.security) applySecurityModes(j.security); loadSecurity();
+}
+async function saveUpdate(){
+  await api('/api/admin/update-settings','POST',{latestVersion:latestVersion.value,downloadUrl:downloadUrl.value,forceUpdate:forceUpdate.checked,updateMessage:updateMessage.value});
+  alert('Update settings saved');load();
+}
+async function createLicense(){
+  const j=await api('/api/admin/licenses','POST',{key:newKey.value,customerName:newName.value,contact:newContact.value,maxDevices:newMax.value,days:newDays.value,note:newNote.value});
+  if(j.ok){createdKey.classList.remove('hidden');createdKey.innerHTML=`Created key: <b class="mono">${j.licenseKey}</b> <button onclick="navigator.clipboard.writeText('${j.licenseKey}')">Copy</button>`;newKey.value='';load();}
+}
+function renderLicenses(){
+  licenseTable.innerHTML='<tr><th>Key</th><th>User</th><th>Devices</th><th>Expires</th><th>24h</th><th>Status</th><th>Actions</th></tr>'+
+  STATE.licenses.map(l=>{
+    const devs=l.devices||[];
+    return `<tr>
+      <td class="mono">${l.keyPreview}</td><td>${l.customerName||''}<br><span class="muted">${l.contact||''}</span></td>
+      <td>${devs.length}/${l.maxDevices}<br>${devs.map(d=>`<span class="badge">${d.location.city||'Unknown'}, ${d.location.country||''}</span>`).join(' ')}</td>
+      <td>${fmt(l.expiresAt)}</td><td>${mins(l.usage24hMinutes)}</td>
+      <td>${l.banned?'<span class="bad">BANNED</span>':'<span class="ok">ACTIVE</span>'}</td>
+      <td class="actions">
+        <button onclick="editDevices('${l.id}',${l.maxDevices})">Set Devices</button>
+        <button onclick="extend('${l.id}')">Extend</button>
+        <button class="${l.banned?'green':'amber'}" onclick="banLic('${l.id}',${!l.banned})">${l.banned?'Unban':'Ban'}</button>
+        <button class="red" onclick="delLic('${l.id}')">Delete</button>
+      </td></tr>`
+  }).join('');
+}
+async function editDevices(id,current){const v=prompt('Max devices:',current);if(!v)return;await api('/api/admin/licenses/'+id,'PATCH',{maxDevices:Number(v)});load();}
+async function extend(id){const v=prompt('Add valid days:',30);if(!v)return;await api('/api/admin/licenses/'+id,'PATCH',{addDays:Number(v)});load();}
+async function banLic(id,banned){await api('/api/admin/licenses/'+id,'PATCH',{banned});load();}
+async function delLic(id){if(confirm('Delete this user/license and all devices?')){await api('/api/admin/licenses/'+id,'DELETE');load();}}
+function renderDevices(){
+  deviceTable.innerHTML='<tr><th>Device</th><th>License/User</th><th>Location</th><th>IP/ISP</th><th>OS/App</th><th>Seen</th><th>24h</th><th>Actions</th></tr>'+
+  STATE.devices.map(d=>{
+    const l=STATE.licenses.find(x=>x.id===d.licenseId)||{};
+    return `<tr>
+      <td class="mono">${d.deviceHash.slice(0,16)}...<br><span class="muted">${d.deviceLabel||''}</span></td>
+      <td>${l.customerName||''}<br><span class="mono muted">${l.keyPreview||''}</span></td>
+      <td>${d.location.city||'Unknown'}, ${d.location.region||''}<br>${d.location.country||''} ${d.location.timezone?'<br><span class="muted">'+d.location.timezone+'</span>':''}</td>
+      <td>${d.ip||''}<br><span class="muted">${d.location.isp||''}</span></td>
+      <td>${d.os||''}<br>${d.appVersion||''}</td>
+      <td>First: ${fmt(d.firstSeen)}<br>Last: ${fmt(d.lastSeen)}</td>
+      <td>${mins(d.usage24hMinutes)}</td>
+      <td class="actions">
+        <button class="${d.banned?'green':'amber'}" onclick="patchDev('${d.id}',{banned:${!d.banned}})">${d.banned?'Unban':'Ban'}</button>
+        <button onclick="patchDev('${d.id}',{revoked:${!d.revoked}})">${d.revoked?'Unrevoke':'Revoke'}</button>
+        <button class="red" onclick="delDev('${d.id}')">Delete</button>
+      </td></tr>`
+  }).join('');
+}
+async function patchDev(id,obj){await api('/api/admin/devices/'+id,'PATCH',obj);load();}
+async function delDev(id){if(confirm('Delete this device?')){await api('/api/admin/devices/'+id,'DELETE');load();}}
+function renderUsage(){
+  usageTable.innerHTML='<tr><th>User/License</th><th>24h Usage</th><th>Devices Used</th><th>Last Seen</th><th>Locations</th></tr>'+
+  STATE.licenses.map(l=>{
+    const devs=l.devices||[];
+    return `<tr><td>${l.customerName||''}<br><span class="mono">${l.keyPreview}</span></td><td><b>${mins(l.usage24hMinutes)}</b></td>
+    <td>${devs.length}</td><td>${fmt(devs.map(d=>d.lastSeen).sort().pop())}</td>
+    <td>${devs.map(d=>`${d.location.city||'Unknown'}, ${d.location.country||''}`).join('<br>')}</td></tr>`
+  }).join('');
+}
+
+async function changeAdminPin(){
+  const currentPin = document.getElementById('currentAdminPin').value;
+  const newPin = document.getElementById('newAdminPin').value;
+  const confirmPin = document.getElementById('confirmAdminPin').value;
+  const msg = document.getElementById('pinChangeMsg');
+  msg.textContent = '';
+  msg.className = 'muted';
+  if(!currentPin || !newPin || !confirmPin){
+    msg.textContent = 'Please fill all fields.';
+    msg.className = 'bad';
+    return;
+  }
+  if(newPin.length < 4){
+    msg.textContent = 'New PIN must be at least 4 characters.';
+    msg.className = 'bad';
+    return;
+  }
+  if(newPin !== confirmPin){
+    msg.textContent = 'New PIN and confirm PIN do not match.';
+    msg.className = 'bad';
+    return;
+  }
+  const j = await api('/api/admin/change-pin','POST',{currentPin,newPin});
+  if(j && j.ok){
+    msg.textContent = 'PIN changed successfully. Please login again.';
+    msg.className = 'ok';
+    setTimeout(()=>logout(), 1200);
+  } else {
+    msg.textContent = (j && j.reason) ? j.reason : 'PIN change failed.';
+    msg.className = 'bad';
+  }
+}
+
+
+
+function applySecurityModes(security){
+  const modes = (security && security.modes) ? security.modes : {};
+  const pin = document.getElementById('modeRequirePin');
+  const pass = document.getElementById('modeRequirePassword');
+  const fp = document.getElementById('modeRequireFingerprint');
+  if(pin) pin.checked = modes.requirePin !== false;
+  if(pass) pass.checked = modes.requirePassword === true;
+  if(fp) fp.checked = modes.requireFingerprint === true;
+}
+async function saveSecurityModes(){
+  const requirePin = document.getElementById('modeRequirePin').checked;
+  const requirePassword = document.getElementById('modeRequirePassword').checked;
+  const requireFingerprint = document.getElementById('modeRequireFingerprint').checked;
+  const msg = document.getElementById('securityModeMsg');
+  msg.textContent = '';
+  msg.className = 'muted';
+  if(!requirePin && !requirePassword && !requireFingerprint){
+    msg.textContent = 'For safety, enable at least one login method.';
+    msg.className = 'bad';
+    return;
+  }
+  const j = await api('/api/admin/security-modes','POST',{requirePin,requirePassword,requireFingerprint});
+  if(j && j.ok){
+    msg.textContent = 'Login security mode saved.';
+    msg.className = 'ok';
+    applySecurityModes(j.security || {});
+  } else {
+    msg.textContent = (j && j.reason) ? j.reason : 'Failed to save security mode.';
+    msg.className = 'bad';
+  }
+}
+
+async function changeAdminPassword(){
+  const currentPassword = document.getElementById('currentAdminPassword').value;
+  const newPassword = document.getElementById('newAdminPassword').value;
+  const confirmPassword = document.getElementById('confirmAdminPassword').value;
+  const msg = document.getElementById('passwordChangeMsg');
+  msg.textContent = '';
+  msg.className = 'muted';
+  if(!newPassword || !confirmPassword){
+    msg.textContent = 'Please fill new password and confirm password.';
+    msg.className = 'bad';
+    return;
+  }
+  if(newPassword.length < 6){
+    msg.textContent = 'New password must be at least 6 characters.';
+    msg.className = 'bad';
+    return;
+  }
+  if(newPassword !== confirmPassword){
+    msg.textContent = 'New password and confirm password do not match.';
+    msg.className = 'bad';
+    return;
+  }
+  const j = await api('/api/admin/change-password','POST',{currentPassword,newPassword});
+  if(j && j.ok){
+    msg.textContent = 'Password changed successfully. Please login again.';
+    msg.className = 'ok';
+    setTimeout(()=>logout(), 1200);
+  } else {
+    msg.textContent = (j && j.reason) ? j.reason : 'Password change failed.';
+    msg.className = 'bad';
+  }
+}
+async function registerFingerprint(){
+  const fingerprintHash = await makeAdminFingerprint();
+  const label = document.getElementById('fingerprintLabel').value || 'Admin Browser';
+  const j = await api('/api/admin/register-fingerprint','POST',{fingerprintHash,label});
+  if(j && j.ok){
+    alert('This browser fingerprint has been registered. From now on, login will require this registered browser/device.');
+    loadSecurity();
+  } else {
+    alert((j && j.reason) ? j.reason : 'Failed to register fingerprint.');
+  }
+}
+async function loadSecurity(){
+  const j = await api('/api/admin/security');
+  if(!j || !j.ok) return;
+  renderFingerprints(j.security || {}); applySecurityModes(j.security || {});
+}
+function renderFingerprints(security){
+  const tbl = document.getElementById('fingerprintTable');
+  if(!tbl) return;
+  const list = security.fingerprints || [];
+  tbl.innerHTML = '<tr><th>Label</th><th>Hash</th><th>Created</th><th>Last Used</th><th>Action</th></tr>' +
+    list.map(f=>`<tr>
+      <td>${f.label || ''}</td>
+      <td class="mono">${f.hashPreview || ''}</td>
+      <td>${fmt(f.createdAt)}</td>
+      <td>${fmt(f.lastUsedAt)}</td>
+      <td><button class="red" onclick="deleteFingerprint('${f.id}')">Delete</button></td>
+    </tr>`).join('');
+}
+async function deleteFingerprint(id){
+  if(!confirm('Delete this admin fingerprint?')) return;
+  await api('/api/admin/fingerprints/'+id,'DELETE');
+  loadSecurity();
+}
+
+if(TOKEN){login.classList.add('hidden');app.classList.remove('hidden');load();}
+setInterval(()=>{if(TOKEN)load()},30000);
+</script>
+</body>
+</html>
